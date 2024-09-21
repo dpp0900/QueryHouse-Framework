@@ -1,0 +1,9 @@
+[submodule "postgres"]
+	path = postgres
+	url = https://github.com/postgres/postgres.git
+[submodule "mysql"]
+	path = mysql
+	url = https://github.com/mysql/mysql-server.git
+[submodule "AFLplusplus"]
+	path = AFLplusplus
+	url = https://github.com/AFLplusplus/AFLplusplus.git
