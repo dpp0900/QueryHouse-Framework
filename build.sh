@@ -14,7 +14,7 @@ if [ ! -d "$BASE_DIR/bld" ]; then
 fi
 
 cd $BASE_DIR/bld
-cmake $BASE_DIR/mysql/ -DDOWNLOAD_BOOST=1 -DWITH_BOOST=../boost -DWITH_DEBUG=1 -DCPACK_MONOLITHIC_INSTALL=1 -DWITH_UNIT_TESTS=OFF
+cmake $BASE_DIR/mysql/ -DDOWNLOAD_BOOST=1 -DWITH_BOOST=../boost 
 make -j
 
 sudo cmake --install . --prefix /usr/local/mysql/
