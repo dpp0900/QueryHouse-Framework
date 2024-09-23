@@ -1,5 +1,5 @@
 #!/bin/bash
-
+START_TIME=$(date +%s)
 BASE_DIR=~/QueryHouse-Framework
 
 sudo apt-get update && \
@@ -15,7 +15,7 @@ fi
 
 cd $BASE_DIR/bld
 cmake $BASE_DIR/mysql/ -DDOWNLOAD_BOOST=1 -DWITH_BOOST=../boost 
-make -j
+make -j20
 
 sudo cmake --install . --prefix /usr/local/mysql/
 
@@ -28,6 +28,14 @@ fi
 
 bin/mysqld --initialize-insecure --user=$USER
 
+MYSQL_END_TIME=$(date +%s)
+
 cd $BASE_DIR
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -Wno-dev -DMYSQL=ON
 cmake --build build -j
+
+DRIVER_END_TIME=$(date +%s)
+
+echo "MYSQL BUILD TIME: $((MYSQL_END_TIME - START_TIME))s"
+echo "DRIVER BUILD TIME: $((DRIVER_END_TIME - MYSQL_END_TIME))s"
+echo "TOTAL BUILD TIME: $((DRIVER_END_TIME - START_TIME))s"
