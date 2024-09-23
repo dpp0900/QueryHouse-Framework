@@ -35,6 +35,8 @@ bin/mysqld --initialize-insecure --user=$USER
 
 MYSQL_END_TIME=$(date +%s)
 
+kill $(ps aux | grep 'postgres -D /usr/local/pgsql/data' | awk '{print $2}')
+
 if [ ! -d "$BASE_DIR/postgres_bld" ]; then
     mkdir -p $BASE_DIR/postgres_bld
 fi
@@ -45,15 +47,16 @@ $BASE_DIR/postgres/configure \
 
 sudo make -j20
 sudo make install
+rm -rf /usr/local/pgsql/data/*
 sudo mkdir /usr/local/pgsql/data
 sudo chown $USER /usr/local/pgsql/data
 
-/usr/local/pgsql/bin/initdb -D /usr/local/pgsql/data
 
+/usr/local/pgsql/bin/initdb -D /usr/local/pgsql/data
 POSTGRES_END_TIME=$(date +%s)
 
 cd $BASE_DIR
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -Wno-dev -DMYSQL=ON
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -Wno-dev
 cmake --build build -j
 
 DRIVER_END_TIME=$(date +%s)

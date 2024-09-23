@@ -81,6 +81,13 @@
         "typeinfo": "cpp",
         "valarray": "cpp",
         "variant": "cpp",
-        "*.ipp": "cpp"
-    }
+        "*.ipp": "cpp",
+        "*.inc": "cpp",
+        "strstream": "cpp",
+        "charconv": "cpp",
+        "complex": "cpp",
+        "source_location": "cpp",
+        "rope": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }
