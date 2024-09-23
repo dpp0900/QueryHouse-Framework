@@ -15,21 +15,10 @@ option(SQLITE "Build sqlite" OFF)
 option(MYSQL "Build mysql" OFF)
 option(POSTGRESQL "Build postgresql" OFF)
 
-if(SQLITE
-   OR MYSQL
-   OR POSTGRESQL)
-  set(ALL OFF)
-endif()
 
-if(ALL)
-  set(SQLITE ON)
-  set(MYSQL ON)
-  set(POSTGRESQL ON)
-endif()
-
-if(SQLITE)
-  list(APPEND DBMS sqlite)
-endif()
+set(SQLITE OFF)
+set(MYSQL ON)
+set(POSTGRESQL ON)
 
 if(MYSQL)
   list(APPEND DBMS mysql)
