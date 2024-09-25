@@ -41,6 +41,7 @@ ExecutionStatus MySQLClient::execute(const char *query, size_t size) {
   // Create a connection for executing the query
   // Check the response.
   // Return status accordingly.
+  std::cout << "Execute query: " << query << std::endl;
   std::string database_name = db_prefix_ + std::to_string(database_id_);
   std::optional<MYSQL> connection = create_connection(database_name);
   if (!connection.has_value()) {

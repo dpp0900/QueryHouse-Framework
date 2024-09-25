@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
 
   constexpr size_t kMaxInputSize = 0x100000;
   u8 *buf = (u8 *)malloc(kMaxInputSize);
-  s32 len;
+  s32 len = 1;
 
   for (auto &db_client : db_clients) {
     if (!db_client->check_alive()) {
@@ -75,6 +75,20 @@ int main(int argc, char *argv[]) {
       cout << "Start server: " << startup_cmd << endl;
       system(startup_cmd.c_str());
       sleep(5);
+    }
+  }
+  while (len > 0){
+    cout << "[checkpoints] Start to get the next testcase" << endl;
+    for (auto &db_client : db_clients) {
+      len = next_testcase(buf, kMaxInputSize);
+      db_client->prepare_env();
+      client::ExecutionStatus status = db_client->execute((const char *)buf, len);
+      if (status == client::kServerCrash) {
+        while (!db_client->check_alive()) {
+          sleep(5);
+        }
+      }
+      db_client->clean_up_env();
     }
   }
 
