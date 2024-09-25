@@ -53,6 +53,7 @@ void PostgreSQLClient::prepare_env() {
 }
 
 ExecutionStatus PostgreSQLClient::execute(const char *query, size_t size) {
+  std::cout << "Execute query: " << query << std::endl;
   auto conn = create_connection(db_name_);
 
   if (PQstatus(conn) != CONNECTION_OK) {
