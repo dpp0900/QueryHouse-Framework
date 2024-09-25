@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <string>
+#include <iostream>
 
 #ifdef __SQUIRREL_MYSQL__
 #include "client_mysql.h"
@@ -11,9 +12,14 @@
 #include "client_postgresql.h"
 #endif
 
+#ifdef __SQUIRREL_SQLITE__
+#include "client_sqlite.h"
+#endif
+
 namespace client {
 DBClient *create_client(const std::string &db_name, const YAML::Node &config) {
   DBClient *result = nullptr;
+  std::cerr << "Create client: " << db_name << std::endl;
   if (db_name == "mysql") {
 #ifdef __SQUIRREL_MYSQL__
     result = new MySQLClient;
@@ -22,8 +28,14 @@ DBClient *create_client(const std::string &db_name, const YAML::Node &config) {
 #ifdef __SQUIRREL_POSTGRESQL__
     result = new PostgreSQLClient;
 #endif
-  } else {
-    assert(false && "It is not supported!");
+  } else if (db_name == "sqlite") {
+#ifdef __SQUIRREL_SQLITE__
+    std::cerr << "Create SQLite client" << std::endl;
+    result = new SQLiteClient;
+#endif
+  }
+  else {
+    assert(result && "It is not supported!");
   }
   assert(result && "It is not supported!");
 

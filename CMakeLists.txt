@@ -16,7 +16,7 @@ option(MYSQL "Build mysql" OFF)
 option(POSTGRESQL "Build postgresql" OFF)
 
 
-set(SQLITE OFF)
+set(SQLITE ON)
 set(MYSQL ON)
 set(POSTGRESQL ON)
 
@@ -47,6 +47,18 @@ if(POSTGRESQL)
   list(APPEND LINK_CLIENT postgresql_client)
   list(APPEND CLIENT_DEFINITION __SQUIRREL_POSTGRESQL__)
 endif()
+
+if(SQLITE)
+  list(APPEND DBMS sqlite)
+  find_package(SQLite3 REQUIRED)
+  add_library(sqlite_client OBJECT srcs/internal/client/client_sqlite.cc)
+  target_include_directories(sqlite_client PUBLIC ${SQLite3_INCLUDE_DIRS} srcs/internal/client)
+  target_link_libraries(sqlite_client PUBLIC ${SQLite3_LIBRARIES} yaml-cpp)
+  target_compile_options(sqlite_client PRIVATE -fPIC)
+  list(APPEND LINK_CLIENT sqlite_client)
+  list(APPEND CLIENT_DEFINITION __SQUIRREL_SQLITE__)
+endif()
+
 
 include(FetchContent)
 find_package(yaml-cpp REQUIRED)

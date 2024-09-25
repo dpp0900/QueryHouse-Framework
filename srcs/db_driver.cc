@@ -61,6 +61,8 @@ int main(int argc, char *argv[]) {
     db_names.push_back(db_name);
     startup_cmds.push_back(startup_cmd);
     configs.push_back(config);
+    cout << "DB Name: " << db_name << endl;
+    cout << "Startup Command: " << startup_cmd << endl;
     db_clients.emplace_back(client::create_client(db_name, config));
   }
 
