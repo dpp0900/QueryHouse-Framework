@@ -1,6 +1,7 @@
 build
 mysql_bld
 postgres_bld
+sqlite_bld
 output
 .cache
 Testing

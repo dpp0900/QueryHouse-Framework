@@ -55,6 +55,17 @@ sudo chown $USER /usr/local/pgsql/data
 /usr/local/pgsql/bin/initdb -D /usr/local/pgsql/data
 POSTGRES_END_TIME=$(date +%s)
 
+if [ ! -d "$BASE_DIR/sqlite_bld" ]; then
+    mkdir -p $BASE_DIR/sqlite_bld
+fi
+
+cd $BASE_DIR/sqlite_bld
+$BASE_DIR/sqlite/configure --enable-all
+make -j20
+sudo make install
+SQLITE_END_TIME=$(date +%s)
+
+
 cd $BASE_DIR
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -Wno-dev
 cmake --build build -j
@@ -64,5 +75,6 @@ DRIVER_END_TIME=$(date +%s)
 echo "APT: $((APT_END_TIME - START_TIME))s"
 echo "MYSQL: $((MYSQL_END_TIME - APT_END_TIME))s"
 echo "POSTGRES: $((POSTGRES_END_TIME - MYSQL_END_TIME))s"
+echo "SQLITE: $((SQLITE_END_TIME - POSTGRES_END_TIME))s"
 echo "DRIVER: $((DRIVER_END_TIME - POSTGRES_END_TIME))s"
 echo "TOTAL: $((DRIVER_END_TIME - START_TIME))s"
