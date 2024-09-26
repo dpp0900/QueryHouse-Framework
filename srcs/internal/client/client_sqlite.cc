@@ -1,6 +1,7 @@
 #include "client_sqlite.h"
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace client {
 
@@ -17,6 +18,7 @@ void SQLiteClient::prepare_env() {
 }
 
 ExecutionStatus SQLiteClient::execute(const char *query, size_t size) {
+  std::vector<std::string> queries = split_query(query, size);
   sqlite3 *db = nullptr;
   if (auto conn = create_connection(); conn) {
     db = *conn;
@@ -24,17 +26,17 @@ ExecutionStatus SQLiteClient::execute(const char *query, size_t size) {
     std::cerr << "Failed to connect to SQLite database" << std::endl;
     return kServerCrash;
   }
-
-  char *err_msg = nullptr;
-  int result = sqlite3_exec(db, query, nullptr, nullptr, &err_msg);
-
-  if (result != SQLITE_OK) {
-    std::cerr << "SQLite error: " << err_msg << std::endl;
-    sqlite3_free(err_msg);
-    close_connection(db);
-    return kSyntaxError;
+  for (const auto &q : queries) {
+    char *err_msg = nullptr;
+    std::cout << "Execute query: " << q << std::endl;
+    int result = sqlite3_exec(db, q.c_str(), nullptr, nullptr, &err_msg);
+    if (result != SQLITE_OK) {
+      std::cerr << "SQLite error: " << err_msg << std::endl;
+      sqlite3_free(err_msg);
+      close_connection(db);
+      return kSyntaxError;
+    }
   }
-
   close_connection(db);
   return kNormal;
 }
