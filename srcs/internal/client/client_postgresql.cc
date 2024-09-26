@@ -53,7 +53,7 @@ void PostgreSQLClient::prepare_env() {
 }
 
 ExecutionStatus PostgreSQLClient::execute(const char *query, size_t size) {
-  std::cout << "Execute query: " << query << std::endl;
+  std::vector<std::string> queries = split_query(query, size);
   auto conn = create_connection(db_name_);
 
   if (PQstatus(conn) != CONNECTION_OK) {
@@ -61,22 +61,24 @@ ExecutionStatus PostgreSQLClient::execute(const char *query, size_t size) {
     PQfinish(conn);
     return kServerCrash;
   }
+  for (const auto &q : queries) {
+    std::cout << "Execute query: " << q << std::endl;
+    std::string cmd(q, q.size());
+    auto res = PQexec(conn, cmd.c_str());
+    if (PQstatus(conn) != CONNECTION_OK) {
+      fprintf(stderr, "Error3: %s\n", PQerrorMessage(conn));
+      PQclear(res);
+      PQfinish(conn);
+      return kServerCrash;
+    }
 
-  std::string cmd(query, size);
-
-  auto res = PQexec(conn, cmd.c_str());
-  if (PQstatus(conn) != CONNECTION_OK) {
-    fprintf(stderr, "Error3: %s\n", PQerrorMessage(conn));
-    PQclear(res);
-    return kServerCrash;
-  }
-
-  if (PQresultStatus(res) != PGRES_COMMAND_OK &&
-      PQresultStatus(res) != PGRES_TUPLES_OK) {
-    fprintf(stderr, "Error4: %s\n", PQerrorMessage(conn));
-    PQclear(res);
-    PQfinish(conn);
-    return kExecuteError;
+    if (PQresultStatus(res) != PGRES_COMMAND_OK &&
+        PQresultStatus(res) != PGRES_TUPLES_OK) {
+      fprintf(stderr, "Error4: %s\n", PQerrorMessage(conn));
+      PQclear(res);
+      PQfinish(conn);
+      return kExecuteError;
+    }
   }
   PQclear(res);
   PQfinish(conn);
