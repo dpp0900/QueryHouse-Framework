@@ -81,8 +81,8 @@ int main(int argc, char *argv[]) {
     }
   }
   while (len > 0){
-    cout << "[checkpoints] Start to get the next testcase" << endl;
     for (auto &db_client : db_clients) {
+      cout << "DB Client: " << db_names[&db_client - &db_clients[0]] << endl;
       len = next_testcase(buf, kMaxInputSize);
       db_client->prepare_env();
       client::ExecutionStatus status = db_client->execute((const char *)buf, len);
