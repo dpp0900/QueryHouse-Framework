@@ -2,6 +2,7 @@
 #include <cstring>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include "client.h"
 #include "yaml-cpp/yaml.h"
@@ -24,7 +25,8 @@ int main(int argc, char **argv) {
   const char *query = "select 1;";
   for (int i = 0; i < 0x100; ++i) {
     test_client->prepare_env();
-    client::ExecutionStatus result = test_client->execute(query, strlen(query));
+    std::vector<std::vector<std::string>> v_result;
+    client::ExecutionStatus result = test_client->execute(query, strlen(query), v_result);
     assert(result == client::kNormal);
     test_client->clean_up_env();
   }

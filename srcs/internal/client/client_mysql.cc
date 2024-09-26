@@ -8,6 +8,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "mysql.h"
 #include "mysqld_error.h"
@@ -37,25 +38,47 @@ void MySQLClient::prepare_env() {
   }
 }
 
-ExecutionStatus MySQLClient::execute(const char *query, size_t size) {
+ExecutionStatus MySQLClient::execute(const char *query, size_t size, std::vector<std::vector<std::string>> &result) {
   // Create a connection for executing the query
-  // Check the response.
-  // Return status accordingly.
   std::vector<std::string> queries = split_query(query, size);
   std::string database_name = db_prefix_ + std::to_string(database_id_);
   std::optional<MYSQL> connection = create_connection(database_name);
   if (!connection.has_value()) {
-    std::cerr << "Cannot creat connection at execute " << std::endl;
+    std::cerr << "Cannot create connection at execute" << std::endl;
     return kServerCrash;
   }
+
   for (const auto &q : queries) {
-    std::cout<< "[MySQL] Execute query: " << q << std::endl;
+    std::cout << "[MySQL] Execute query: " << q << std::endl;
     int server_response = mysql_real_query(&(*connection), q.c_str(), q.size());
+
     if (is_crash_response(server_response)) {
-      std::cerr << "Cannot mySQL_QUERY " << std::endl;
+      std::cerr << "MySQL query error" << std::endl;
       return kServerCrash;
     }
+
+    // Handle result set
+    MYSQL_RES *query_result = mysql_store_result(&(*connection));
+    if (query_result) {
+      int num_fields = mysql_num_fields(query_result);
+      MYSQL_ROW row;
+      while ((row = mysql_fetch_row(query_result))) {
+        std::vector<std::string> row_result;
+        for (int i = 0; i < num_fields; ++i) {
+          row_result.push_back(row[i] ? row[i] : "NULL");
+        }
+        result.push_back(row_result);
+      }
+      mysql_free_result(query_result);
+    }
+
+    // Check for additional queries in multi-statement execution
+    if (mysql_next_result(&(*connection)) > 0) {
+      std::cerr << "MySQL error while executing next query: " << mysql_error(&(*connection)) << std::endl;
+      return kSyntaxError;
+    }
   }
+
   ExecutionStatus server_status = clean_up_connection(*connection);
   mysql_close(&(*connection));
   return server_status;
@@ -68,7 +91,7 @@ void MySQLClient::clean_up_env() {
   if (!connection.has_value()) {
     return;
   }
-  // TODO: clean up the connection.
+
   mysql_real_query(&(*connection), reset_query.c_str(), reset_query.size());
   clean_up_connection((*connection));
   mysql_close(&(*connection));
@@ -117,9 +140,7 @@ bool MySQLClient::create_database(const std::string &database) {
   }
 
   string cmd = "CREATE DATABASE IF NOT EXISTS " + database + ";";
-  // TODO: Check server response status.
   mysql_real_query(&tmp_m, cmd.c_str(), cmd.size());
-  // std::cerr << "Server response: " << server_response << std::endl;
   clean_up_connection(tmp_m);
   mysql_close(&tmp_m);
   return true;
@@ -135,18 +156,14 @@ ExecutionStatus MySQLClient::clean_up_connection(MYSQL &mm) {
   if (res != -1) {
     res = mysql_errno(&mm);
     if (is_crash_response(res)) {
-      // std::cerr << "Found a crash!" << std::endl;
       return kServerCrash;
     }
     if (res == ER_PARSE_ERROR) {
-      // std::cerr << "Syntax error" << std::endl;
       return kSyntaxError;
     } else {
-      // std::cerr << "Semantic error" << std::endl;
       return kSemanticError;
     }
   }
-  // std::cerr << "Normal" << std::endl;
   return kNormal;
 }
 };  // namespace client

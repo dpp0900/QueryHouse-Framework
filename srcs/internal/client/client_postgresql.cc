@@ -49,7 +49,7 @@ void PostgreSQLClient::prepare_env() {
   PQfinish(conn);
 }
 
-ExecutionStatus PostgreSQLClient::execute(const char *query, size_t size) {
+ExecutionStatus PostgreSQLClient::execute(const char *query, size_t size, std::vector<std::vector<std::string>> &result) {
   std::vector<std::string> queries = split_query(query, size);
   auto conn = create_connection(db_name_);
 
