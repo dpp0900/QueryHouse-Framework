@@ -14,7 +14,7 @@ void SQLiteClient::prepare_env() {
   ++database_id_;
   std::string db_name = db_prefix_ + std::to_string(database_id_) + ".db";
   db_path_ = db_name;
-  std::cout << "Prepared environment with DB: " << db_path_ << std::endl;
+  std::cout << "[SQLite] Prepared environment with DB: " << db_path_ << std::endl;
 }
 
 ExecutionStatus SQLiteClient::execute(const char *query, size_t size) {
@@ -28,7 +28,7 @@ ExecutionStatus SQLiteClient::execute(const char *query, size_t size) {
   }
   for (const auto &q : queries) {
     char *err_msg = nullptr;
-    std::cout << "Execute query: " << q << std::endl;
+    std::cout << "[SQLite] Execute query: " << q << std::endl;
     int result = sqlite3_exec(db, q.c_str(), nullptr, nullptr, &err_msg);
     if (result != SQLITE_OK) {
       std::cerr << "SQLite error: " << err_msg << std::endl;
@@ -46,7 +46,7 @@ void SQLiteClient::clean_up_env() {
   if (remove(db_name.c_str()) != 0) {
     std::cerr << "Error deleting database file: " << db_name << std::endl;
   } else {
-    std::cout << "Deleted database: " << db_name << std::endl;
+    std::cout << "[SQLite] Deleted database: " << db_name << std::endl;
   }
 }
 

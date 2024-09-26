@@ -49,6 +49,7 @@ ExecutionStatus MySQLClient::execute(const char *query, size_t size) {
     return kServerCrash;
   }
   for (const auto &q : queries) {
+    std::cout<< "[MySQL] Execute query: " << q << std::endl;
     int server_response = mysql_real_query(&(*connection), q.c_str(), q.size());
     if (is_crash_response(server_response)) {
       std::cerr << "Cannot mySQL_QUERY " << std::endl;
