@@ -3,11 +3,26 @@
 
 #include <cstddef>
 #include <string>
+#include <vector>
 
 #include "yaml-cpp/yaml.h"
 
 namespace client {
 
+
+inline std::vector<std::string> split_query(const char *buf, size_t len) {
+  std::vector<std::string> queries;
+  std::string query;
+  for (size_t i = 0; i < len; i++) {
+    if (buf[i] == ';') {
+      queries.push_back(query);
+      query.clear();
+    } else {
+      query.push_back(buf[i]);
+    }
+  }
+  return queries;
+}
 enum ExecutionStatus {
   kConnectFailed,
   kExecuteError,

@@ -37,6 +37,7 @@ int next_testcase(u8 *buf, size_t max_size) {
   return len;
 }
 
+
 int main(int argc, char *argv[]) {
 
   //set basedir as /home/$user/QueryHouse-Framwork
@@ -94,23 +95,6 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  
-
-  // while ((len = next_testcase(buf, kMaxInputSize)) > 0) {
-  //   cerr << "Get the next testcase" << endl;
-  //   string query((const char *)buf, len);
-  //   database->prepare_env();
-
-  //   client::ExecutionStatus status = database->execute((const char *)buf, len);
-
-  //   if (status == client::kServerCrash) {
-  //     while (!database->check_alive()) {
-  //       sleep(5);
-  //     }
-  //   }
-  //   database->clean_up_env();
-  // }
-  // assert(false && "Crash on parent?");
 
   return 0;
 }
