@@ -41,18 +41,19 @@ ExecutionStatus MySQLClient::execute(const char *query, size_t size) {
   // Create a connection for executing the query
   // Check the response.
   // Return status accordingly.
-  std::cout << "Execute query: " << query << std::endl;
+  std::vector<std::string> queries = split_query(query, size);
   std::string database_name = db_prefix_ + std::to_string(database_id_);
   std::optional<MYSQL> connection = create_connection(database_name);
   if (!connection.has_value()) {
     std::cerr << "Cannot creat connection at execute " << std::endl;
     return kServerCrash;
   }
-
-  int server_response = mysql_real_query(&(*connection), query, size);
-  if (is_crash_response(server_response)) {
-    std::cerr << "Cannot mySQL_QUERY " << std::endl;
-    return kServerCrash;
+  for (const auto &q : queries) {
+    int server_response = mysql_real_query(&(*connection), q.c_str(), q.size());
+    if (is_crash_response(server_response)) {
+      std::cerr << "Cannot mySQL_QUERY " << std::endl;
+      return kServerCrash;
+    }
   }
   ExecutionStatus server_status = clean_up_connection(*connection);
   mysql_close(&(*connection));
