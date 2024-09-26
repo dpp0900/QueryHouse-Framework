@@ -84,8 +84,15 @@ int main(int argc, char *argv[]) {
     for (auto &db_client : db_clients) {
       cout << "DB Client: " << db_names[&db_client - &db_clients[0]] << endl;
       len = next_testcase(buf, kMaxInputSize);
+      vector<vector<string>> result;
       db_client->prepare_env();
-      client::ExecutionStatus status = db_client->execute((const char *)buf, len);
+      client::ExecutionStatus status = db_client->execute((const char *)buf, len, result);
+      for (const auto &row : result) {
+        for (const auto &col : row) {
+          cout << col << " ";
+        }
+        cout << endl;
+      }
       if (status == client::kServerCrash) {
         while (!db_client->check_alive()) {
           sleep(5);

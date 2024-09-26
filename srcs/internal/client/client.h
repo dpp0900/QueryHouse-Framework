@@ -40,7 +40,7 @@ class DBClient {
   virtual bool check_alive() = 0;
   // Set up a clean environment for execution.
   virtual void prepare_env() = 0;
-  virtual ExecutionStatus execute(const char *query, size_t size) = 0;
+  virtual ExecutionStatus execute(const char *query, size_t size,std::vector<std::vector<std::string>> &result) = 0;
   virtual void clean_up_env() {}
 };
 
