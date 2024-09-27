@@ -8,6 +8,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "absl/strings/str_format.h"
 #include "client.h"
@@ -58,18 +59,75 @@ ExecutionStatus PostgreSQLClient::execute(const char *query, size_t size, std::v
     PQfinish(conn);
     return kServerCrash;
   }
+
   for (const auto &q : queries) {
     std::cout << "[PostgreSQL] Execute query: " << q << std::endl;
     auto res = PQexec(conn, q.c_str());
-    if (PQresultStatus(res) != PGRES_COMMAND_OK &&
-        PQresultStatus(res) != PGRES_TUPLES_OK) {
+    if (PQresultStatus(res) != PGRES_COMMAND_OK && PQresultStatus(res) != PGRES_TUPLES_OK) {
       fprintf(stderr, "Error3: %s\n", PQerrorMessage(conn));
       PQclear(res);
       PQfinish(conn);
       return kExecuteError;
     }
+
+    // Handle result set if any
+    if (PQresultStatus(res) == PGRES_TUPLES_OK) {
+      int num_fields = PQnfields(res);
+      for (int i = 0; i < PQntuples(res); i++) {
+        std::vector<std::string> row_result;
+        for (int j = 0; j < num_fields; j++) {
+          row_result.push_back(PQgetvalue(res, i, j));
+        }
+        result.push_back(row_result);
+      }
+    }
     PQclear(res);
   }
+
+  // Retrieve schema information for all tables
+  std::cout << "[PostgreSQL] Retrieving schema information for all tables..." << std::endl;
+
+  std::string tables_query = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';";
+  auto tables_res = PQexec(conn, tables_query.c_str());
+  if (PQresultStatus(tables_res) != PGRES_TUPLES_OK) {
+    std::cerr << "Error retrieving table list: " << PQerrorMessage(conn) << std::endl;
+    PQclear(tables_res);
+    PQfinish(conn);
+    return kSyntaxError;
+  }
+
+  // Iterate over all tables and fetch their column information
+  for (int i = 0; i < PQntuples(tables_res); i++) {
+    std::string table_name = PQgetvalue(tables_res, i, 0);
+    std::cout << "Table: " << table_name << std::endl;
+
+    // Fetch column information for the current table
+    std::string schema_query = absl::StrFormat(
+        "SELECT column_name, data_type, is_nullable, column_default "
+        "FROM information_schema.columns WHERE table_name = '%s';",
+        table_name);
+    
+    auto schema_res = PQexec(conn, schema_query.c_str());
+    if (PQresultStatus(schema_res) != PGRES_TUPLES_OK) {
+      std::cerr << "Error retrieving schema for table " << table_name << ": " << PQerrorMessage(conn) << std::endl;
+      PQclear(schema_res);
+      continue;
+    }
+
+    for (int j = 0; j < PQntuples(schema_res); j++) {
+      std::string column_name = PQgetvalue(schema_res, j, 0);
+      std::string data_type = PQgetvalue(schema_res, j, 1);
+      std::string is_nullable = PQgetvalue(schema_res, j, 2);
+      std::string column_default = PQgetvalue(schema_res, j, 3);
+
+      std::cout << "  Column: " << column_name << ", Type: " << data_type
+                << ", Nullable: " << is_nullable << ", Default: " << column_default << std::endl;
+    }
+
+    PQclear(schema_res);
+  }
+
+  PQclear(tables_res);
   PQfinish(conn);
   return kNormal;
 }
