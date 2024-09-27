@@ -116,7 +116,7 @@ foreach(dbms IN LISTS DBMS)
                              PRIVATE __SQUIRREL_${UPPER_CASE_DBMS}__)
 endforeach()
 
-if(MYSQL OR POSTGRESQL)
+if(MYSQL OR POSTGRESQL OR SQLITE)
   add_executable(db_driver srcs/db_driver.cc)
   target_link_libraries(db_driver ${YAML_CPP_LIBRARIES} all_client
                         absl::strings absl::str_format)

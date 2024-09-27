@@ -35,6 +35,41 @@ int next_testcase(u8 *buf, size_t max_size) {
   return len;
 }
 
+bool isFloat(string myString) {
+  std::istringstream iss(myString);
+  float f;
+  iss >> noskipws >> f; // noskipws considers leading whitespace invalid
+  // Check the entire string was consumed and if either failbit or badbit is set
+  return iss.eof() && !iss.fail();
+}
+
+bool comapre_result(const vector<vector<string>> &result1, const vector<vector<string>> &result2) {
+  if (result1.size() != result2.size()) {
+    cerr << "Result size is different." << endl;
+    return false;
+  }
+  for (size_t i = 0; i < result1.size(); i++) {
+    if (result1[i].size() != result2[i].size()) {
+      cerr << "Result column size is different." << endl;
+      return false;
+    }
+    for (size_t j = 0; j < result1[i].size(); j++) {
+      if (isFloat(result1[i][j]) && isFloat(result2[i][j])) {
+        if (stof(result1[i][j]) != stof(result2[i][j])) {
+          cerr << "Result is different.(float)" << endl;
+          return false;
+        }
+      } else {
+        if (result1[i][j] != result2[i][j]) {
+          cerr << "Result is different." << endl;
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
 int main(int argc, char *argv[]) {
 
   string basedir = getenv("HOME");
@@ -81,23 +116,39 @@ int main(int argc, char *argv[]) {
       system(startup_cmd.c_str());
       sleep(5);
     }
-  }
-
-  while (len > 0) {
+  }  while (len > 0){
+    vector<vector<vector<string>>> compare_queue;
     for (auto &db_client : db_clients) {
-      cerr << "DB Client: " << db_names[&db_client - &db_clients[0]] << endl;
+      cout << "DB Client: " << db_names[&db_client - &db_clients[0]] << endl;
       len = next_testcase(buf, kMaxInputSize);
+      vector<vector<string>> result;
       db_client->prepare_env();
-      client::ExecutionStatus status = db_client->execute((const char *)buf, len);
+      client::ExecutionStatus status = db_client->execute((const char *)buf, len, result);
+      for (const auto &row : result) {
+        for (const auto &col : row) {
+          cout << col << " ";
+        }
+        cout << endl;
+      }
+      compare_queue.push_back(result);
       if (status == client::kServerCrash) {
         while (!db_client->check_alive()) {
           sleep(5);
         }
       }
       db_client->clean_up_env();
-      cerr << endl;
+    }
+    for (size_t i = 0; i < compare_queue.size(); i++) {
+      for (size_t j = i + 1; j < compare_queue.size(); j++) {
+        if (!comapre_result(compare_queue[i], compare_queue[j])) {
+          cout << "Result is different." << endl;
+        }
+        else {
+          cout << "Result is same." << endl;
+        }
+      }
     }
   }
 
+
   return 0;
-}

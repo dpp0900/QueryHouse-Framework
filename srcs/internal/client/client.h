@@ -3,11 +3,27 @@
 
 #include <cstddef>
 #include <string>
+#include <vector>
 
 #include "yaml-cpp/yaml.h"
 
 namespace client {
 
+
+inline std::vector<std::string> split_query(const char *buf, size_t len) {
+  std::vector<std::string> queries;
+  std::string query;
+  for (size_t i = 0; i < len; i++) {
+    if (buf[i] == ';') {
+      query.push_back(buf[i]);
+      queries.push_back(query);
+      query.clear();
+    } else {
+      query.push_back(buf[i]);
+    }
+  }
+  return queries;
+}
 enum ExecutionStatus {
   kConnectFailed,
   kExecuteError,
@@ -24,7 +40,7 @@ class DBClient {
   virtual bool check_alive() = 0;
   // Set up a clean environment for execution.
   virtual void prepare_env() = 0;
-  virtual ExecutionStatus execute(const char *query, size_t size) = 0;
+  virtual ExecutionStatus execute(const char *query, size_t size,std::vector<std::vector<std::string>> &result) = 0;
   virtual void clean_up_env() {}
 };
 
