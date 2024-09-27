@@ -14,6 +14,7 @@ sudo apt-get -y install make cmake build-essential vim sudo git \
 
 APT_END_TIME=$(date +%s)
 
+# MySQL 빌드 및 설치
 if [ ! -d "$BASE_DIR/mysql_bld" ]; then
     mkdir -p $BASE_DIR/mysql_bld
 fi
@@ -23,8 +24,8 @@ cmake $BASE_DIR/mysql/ -DDOWNLOAD_BOOST=1 -DWITH_BOOST=../boost
 make -j20
 
 sudo cmake --install . --prefix /usr/local/mysql/
-
 sudo chown $USER:$USER /usr/local/mysql/ -R
+
 cd /usr/local/mysql/
 if [ ! -d "mysql-files" ]; then
     mkdir mysql-files
@@ -32,9 +33,9 @@ if [ ! -d "mysql-files" ]; then
 fi
 
 bin/mysqld --initialize-insecure --user=$USER
-
 MYSQL_END_TIME=$(date +%s)
 
+# PostgreSQL 빌드 및 설치
 kill $(ps aux | grep 'postgres -D /usr/local/pgsql/data' | awk '{print $2}')
 
 if [ ! -d "$BASE_DIR/postgres_bld" ]; then
@@ -42,39 +43,45 @@ if [ ! -d "$BASE_DIR/postgres_bld" ]; then
 fi
 
 cd $BASE_DIR/postgres_bld
-$BASE_DIR/postgres/configure \
-    --prefix=/usr/local/pgsql
-
-sudo make -j20
+$BASE_DIR/postgres/configure --prefix=/usr/local/pgsql
+sudo make -j4
 sudo make install
 rm -rf /usr/local/pgsql/data/*
 sudo mkdir /usr/local/pgsql/data
 sudo chown $USER /usr/local/pgsql/data
 
-
 /usr/local/pgsql/bin/initdb -D /usr/local/pgsql/data
 POSTGRES_END_TIME=$(date +%s)
 
+# SQLite 빌드 및 설치
 if [ ! -d "$BASE_DIR/sqlite_bld" ]; then
     mkdir -p $BASE_DIR/sqlite_bld
 fi
 
 cd $BASE_DIR/sqlite_bld
 $BASE_DIR/sqlite/configure --enable-all
-make -j20
+make -j4
 sudo make install
 SQLITE_END_TIME=$(date +%s)
 
+# Oracle 클라이언트 환경 변수 설정
+export CMAKE_PREFIX_PATH="${BASE_DIR}/opt/oracle/instantclient-basic-linux.x64-23.5.0.24.07/instantclient_23_5"
+export LD_LIBRARY_PATH="${BASE_DIR}/opt/oracle/instantclient-basic-linux.x64-23.5.0.24.07/instantclient_23_5:$LD_LIBRARY_PATH"
+ORACLE_END_TIME=$(date +%s)
 
+# CMake 빌드
 cd $BASE_DIR
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -Wno-dev
-cmake --build build -j
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -Wno-dev -DORACLE=ON
+cmake --build build -j4
 
 DRIVER_END_TIME=$(date +%s)
 
+# 빌드 및 설치 시간 출력
 echo "APT: $((APT_END_TIME - START_TIME))s"
 echo "MYSQL: $((MYSQL_END_TIME - APT_END_TIME))s"
 echo "POSTGRES: $((POSTGRES_END_TIME - MYSQL_END_TIME))s"
 echo "SQLITE: $((SQLITE_END_TIME - POSTGRES_END_TIME))s"
-echo "DRIVER: $((DRIVER_END_TIME - POSTGRES_END_TIME))s"
+echo "ORACLE: $((ORACLE_END_TIME - SQLITE_END_TIME))s"
+echo "DRIVER: $((DRIVER_END_TIME - ORACLE_END_TIME))s"
 echo "TOTAL: $((DRIVER_END_TIME - START_TIME))s"
+

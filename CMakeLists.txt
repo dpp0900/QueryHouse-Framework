@@ -59,6 +59,19 @@ if(SQLITE)
   list(APPEND CLIENT_DEFINITION __SQUIRREL_SQLITE__)
 endif()
 
+# Add Oracle code
+if(ORACLE)
+  set(Oracle_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/opt/oracle/instantclient-sdk-linux.x64-23.5.0.24.07/instantclient_23_5/sdk/include")
+  set(Oracle_LIBRARIES "${CMAKE_SOURCE_DIR}/opt/oracle/instantclient-basic-linux.x64-23.5.0.24.07/instantclient_23_5/libclntsh.so.23.1")
+
+  list(APPEND DBMS oracle)
+  add_library(oracle_client OBJECT srcs/internal/client/client_oracle.cc)
+  target_include_directories(oracle_client PUBLIC ${Oracle_INCLUDE_DIRS} srcs/internal/client)
+  target_link_libraries(oracle_client PUBLIC ${Oracle_LIBRARIES} ${YAML_CPP_LIBRARIES})
+  target_compile_options(oracle_client PRIVATE -fPIC)
+  list(APPEND LINK_CLIENT oracle_client)
+  list(APPEND CLIENT_DEFINITION __SQUIRREL_ORACLE__)
+endif()
 
 include(FetchContent)
 find_package(yaml-cpp REQUIRED)

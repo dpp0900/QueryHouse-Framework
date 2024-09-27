@@ -1,0 +1,9 @@
+---
+required: ["init_lib", "data_lib", "db", "passwd", "user_name", "db_name", "startup_cmd"]
+init_lib: /home/Squirrel/data/fuzz_root/oracle_init_lib
+data_lib: /home/Squirrel/data/fuzz_root/global_data_lib_oracle
+db: oracle
+passwd: 'password'
+user_name: 'oracle_user'
+db_name: 'oracle_db'
+startup_cmd: "/path/to/oracle/startup_script.sh"
