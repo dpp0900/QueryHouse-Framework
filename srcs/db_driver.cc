@@ -18,7 +18,6 @@
 #include <vector>            // 추가된 코드: 여러 DBClient를 관리하기 위해 추가
 #include <memory>            // 추가된 코드: 스마트 포인터 사용을 위해 추가
 
-
 #include "absl/strings/str_format.h"
 #include "client.h"
 #include "config.h"
@@ -26,7 +25,6 @@
 #include "yaml-cpp/yaml.h"
 
 using namespace std;
-
 
 int next_testcase(u8 *buf, size_t max_size) {
   ssize_t len = read(STDIN_FILENO, buf, max_size);
@@ -39,7 +37,6 @@ int next_testcase(u8 *buf, size_t max_size) {
 
 int main(int argc, char *argv[]) {
 
-  //set basedir as /home/$user/QueryHouse-Framwork
   string basedir = getenv("HOME");
   basedir += "/QueryHouse-Framework";
   cout << "Basedir: " << basedir << endl;
@@ -63,7 +60,13 @@ int main(int argc, char *argv[]) {
     configs.push_back(config);
     cout << "DB Name: " << db_name << endl;
     cout << "Startup Command: " << startup_cmd << endl;
-    db_clients.emplace_back(client::create_client(db_name, config));
+
+    // Oracle DB 처리 추가
+    if (db_name == "oracle") {
+        db_clients.emplace_back(client::create_client("oracle", config));
+    } else {
+        db_clients.emplace_back(client::create_client(db_name, config));
+    }
   }
 
   constexpr size_t kMaxInputSize = 0x100000;
@@ -79,9 +82,10 @@ int main(int argc, char *argv[]) {
       sleep(5);
     }
   }
-  while (len > 0){
-    cout << "[checkpoints] Start to get the next testcase" << endl;
+
+  while (len > 0) {
     for (auto &db_client : db_clients) {
+      cerr << "DB Client: " << db_names[&db_client - &db_clients[0]] << endl;
       len = next_testcase(buf, kMaxInputSize);
       db_client->prepare_env();
       client::ExecutionStatus status = db_client->execute((const char *)buf, len);
@@ -91,26 +95,9 @@ int main(int argc, char *argv[]) {
         }
       }
       db_client->clean_up_env();
+      cerr << endl;
     }
   }
-
-  
-
-  // while ((len = next_testcase(buf, kMaxInputSize)) > 0) {
-  //   cerr << "Get the next testcase" << endl;
-  //   string query((const char *)buf, len);
-  //   database->prepare_env();
-
-  //   client::ExecutionStatus status = database->execute((const char *)buf, len);
-
-  //   if (status == client::kServerCrash) {
-  //     while (!database->check_alive()) {
-  //       sleep(5);
-  //     }
-  //   }
-  //   database->clean_up_env();
-  // }
-  // assert(false && "Crash on parent?");
 
   return 0;
 }
