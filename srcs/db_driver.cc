@@ -18,6 +18,7 @@
 #include <vector>            // 추가된 코드: 여러 DBClient를 관리하기 위해 추가
 #include <memory>            // 추가된 코드: 스마트 포인터 사용을 위해 추가
 
+
 #include "absl/strings/str_format.h"
 #include "client.h"
 #include "config.h"
@@ -25,6 +26,7 @@
 #include "yaml-cpp/yaml.h"
 
 using namespace std;
+
 
 int next_testcase(u8 *buf, size_t max_size) {
   ssize_t len = read(STDIN_FILENO, buf, max_size);
@@ -72,6 +74,7 @@ bool comapre_result(const vector<vector<string>> &result1, const vector<vector<s
 
 int main(int argc, char *argv[]) {
 
+  //set basedir as /home/$user/QueryHouse-Framwork
   string basedir = getenv("HOME");
   basedir += "/QueryHouse-Framework";
   cout << "Basedir: " << basedir << endl;
@@ -95,13 +98,7 @@ int main(int argc, char *argv[]) {
     configs.push_back(config);
     cout << "DB Name: " << db_name << endl;
     cout << "Startup Command: " << startup_cmd << endl;
-
-    // Oracle DB 처리 추가
-    if (db_name == "oracle") {
-        db_clients.emplace_back(client::create_client("oracle", config));
-    } else {
-        db_clients.emplace_back(client::create_client(db_name, config));
-    }
+    db_clients.emplace_back(client::create_client(db_name, config));
   }
 
   constexpr size_t kMaxInputSize = 0x100000;
@@ -116,7 +113,8 @@ int main(int argc, char *argv[]) {
       system(startup_cmd.c_str());
       sleep(5);
     }
-  }  while (len > 0){
+  }
+  while (len > 0){
     vector<vector<vector<string>>> compare_queue;
     for (auto &db_client : db_clients) {
       cout << "DB Client: " << db_names[&db_client - &db_clients[0]] << endl;
@@ -152,3 +150,4 @@ int main(int argc, char *argv[]) {
 
 
   return 0;
+}
