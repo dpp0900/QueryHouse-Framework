@@ -3,7 +3,9 @@ required: ["init_lib", "data_lib", "db", "passwd", "user_name", "db_name", "star
 init_lib: /home/Squirrel/data/fuzz_root/oracle_init_lib
 data_lib: /home/Squirrel/data/fuzz_root/global_data_lib_oracle
 db: oracle
+host: localhost
 passwd: password
 user_name: system
 db_name: oracle_db
+db_prefix: test
 startup_cmd: ''

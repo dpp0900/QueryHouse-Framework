@@ -26,6 +26,9 @@ echo "[INFO] Installing Oracle Database"
 sudo mkdir -p /opt/oracle
 sudo chown oracle:oinstall /opt/oracle
 sudo dpkg -i "${DEB_NAME}"
+sudo mkdir -p /var/log/oracle-database-free-23ai/results
+sudo touch /var/log/oracle-database-free-23ai/results/oraInstall.log
+sudo chown -R oracle:oinstall /var/log/oracle-database-free-23ai
 
 # Configure Kernel Parameters
 echo "[INFO] Configuring Kernel Parameters"
@@ -56,7 +59,7 @@ sudo sysctl -p
 echo "[INFO] Configuring Oracle Database"
 export ORACLE_SID=FREE 
 export ORAENV_ASK=NO 
-echo -e "\n" | sudo /opt/oracle/product/23ai/dbhomeFree/bin/oraenv
+echo -e "\n" | /opt/oracle/product/23ai/dbhomeFree/bin/oraenv
 
 (echo "password"; echo "password";) | sudo /etc/init.d/oracle-free-23ai configure
 (echo "password"; echo "password";) | sudo /etc/init.d/oracle-free-23ai configure
@@ -64,8 +67,12 @@ echo -e "\n" | sudo /opt/oracle/product/23ai/dbhomeFree/bin/oraenv
 OCI_URL="https://download.oracle.com/otn_software/linux/instantclient/2350000/instantclient-basic-linux.x64-23.5.0.24.07.zip"
 ORACLE_SDK_URL="https://download.oracle.com/otn_software/linux/instantclient/2350000/instantclient-sdk-linux.x64-23.5.0.24.07.zip"
 
-wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" "${OCI_URL}" -O /tmp/OCI.zip
-wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" "${ORACLE_SDK_URL}" -O /tmp/SDK.zip
+if [ ! -f "/tmp/OCI.zip" ]; then
+  wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" "${OCI_URL}" -O /tmp/OCI.zip
+fi
+if [ ! -f "/tmp/SDK.zip" ]; then
+  wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" "${ORACLE_SDK_URL}" -O /tmp/SDK.zip
+fi
 
 sudo unzip /tmp/OCI.zip -d /opt/oracle/product/23ai/dbhomeFree/lib/OCI
 sudo unzip /tmp/SDK.zip -d /opt/oracle/product/23ai/dbhomeFree/lib/SDK
