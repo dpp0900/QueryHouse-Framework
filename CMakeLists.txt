@@ -19,6 +19,7 @@ option(POSTGRESQL "Build postgresql" OFF)
 set(SQLITE ON)
 set(MYSQL ON)
 set(POSTGRESQL ON)
+set(ORACLE ON)
 
 if(MYSQL)
   list(APPEND DBMS mysql)
@@ -53,7 +54,7 @@ if(SQLITE)
   find_package(SQLite3 REQUIRED)
   add_library(sqlite_client OBJECT srcs/internal/client/client_sqlite.cc)
   target_include_directories(sqlite_client PUBLIC ${SQLite3_INCLUDE_DIRS} srcs/internal/client)
-  target_link_libraries(sqlite_client PUBLIC ${SQLite3_LIBRARIES} yaml-cpp)
+  target_link_libraries(sqlite_client PUBLIC ${SQLite3_LIBRARIES} ${YAML_CPP_LIBRARIES})
   target_compile_options(sqlite_client PRIVATE -fPIC)
   list(APPEND LINK_CLIENT sqlite_client)
   list(APPEND CLIENT_DEFINITION __SQUIRREL_SQLITE__)
@@ -61,17 +62,30 @@ endif()
 
 # Add Oracle code
 if(ORACLE)
-  set(Oracle_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/opt/oracle/instantclient-sdk-linux.x64-23.5.0.24.07/instantclient_23_5/sdk/include")
-  set(Oracle_LIBRARIES "${CMAKE_SOURCE_DIR}/opt/oracle/instantclient-basic-linux.x64-23.5.0.24.07/instantclient_23_5/libclntsh.so.23.1")
+  set(Oracle_INCLUDE_DIRS "/opt/oracle/product/23ai/dbhomeFree/lib/SDK/instantclient_23_5/sdk/include")
+  set(Oracle_LIBRARY_DIRS "/opt/oracle/product/23ai/dbhomeFree/lib/OCI/instantclient_23_5")
+  # 라이브러리 파일 추가 (libclntsh.so 파일을 찾을 수 있도록)
+  find_library(Oracle_LIBRARIES NAMES clntsh PATHS ${Oracle_LIBRARY_DIRS} NO_DEFAULT_PATH)
 
+  if(Oracle_LIBRARIES)
+    message(STATUS "Found Oracle Client Library: ${Oracle_LIBRARIES}")
+  else()
+    message(FATAL_ERROR "Oracle Client Library (libclntsh.so) not found")
+  endif()
+
+  # Oracle Client 관련 설정
   list(APPEND DBMS oracle)
   add_library(oracle_client OBJECT srcs/internal/client/client_oracle.cc)
   target_include_directories(oracle_client PUBLIC ${Oracle_INCLUDE_DIRS} srcs/internal/client)
+  target_link_directories(oracle_client PUBLIC ${Oracle_LIBRARY_DIRS}) # 라이브러리 경로 추가
   target_link_libraries(oracle_client PUBLIC ${Oracle_LIBRARIES} ${YAML_CPP_LIBRARIES})
   target_compile_options(oracle_client PRIVATE -fPIC)
+
+  # Oracle 클라이언트를 링크 클라이언트 및 정의 목록에 추가
   list(APPEND LINK_CLIENT oracle_client)
   list(APPEND CLIENT_DEFINITION __SQUIRREL_ORACLE__)
 endif()
+
 
 include(FetchContent)
 find_package(yaml-cpp REQUIRED)
