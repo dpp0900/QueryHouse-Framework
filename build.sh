@@ -1,6 +1,6 @@
 #!/bin/bash
 START_TIME=$(date +%s)
-BASE_DIR=~/QueryHouse-Framework
+BASE_DIR=~/QueryHouse
 
 sudo apt-get update && \
 sudo apt-get -y install make cmake build-essential vim sudo git \

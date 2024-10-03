@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 
   //set basedir as /home/$user/QueryHouse-Framwork
   string basedir = getenv("HOME");
-  basedir += "/QueryHouse-Framework";
+  basedir += "/QueryHouse";
   cout << "Basedir: " << basedir << endl;
   string config_file_path = basedir + "/data/config/";
   vector<string> config_files;
