@@ -14,40 +14,42 @@ namespace client {
 
 class OracleClient : public DBClient {
  public:
-  // Initialize client with YAML configuration
-  virtual void initialize(YAML::Node config);
-  
-  // Set up a clean environment for execution
-  virtual void prepare_env();
-  
-  // Execute a query and store results
-  virtual ExecutionStatus execute(const char* query, size_t size, std::vector<std::vector<std::string>>& result);
-  
-  // Clean up the environment after execution
-  virtual void clean_up_env();
-  
-  // Check if the Oracle server is alive
-  virtual bool check_alive();
+  // Initialize the Oracle client using a YAML configuration node
+  virtual void initialize(YAML::Node config) override;
+
+  // Set up a clean environment for execution (e.g., schema creation)
+  virtual void prepare_env() override;
+
+  // Execute a query and fetch results
+  virtual ExecutionStatus execute(const char *query, size_t size, std::vector<std::vector<std::string>> &result) override;
+
+  // Clean up the environment (e.g., drop schema)
+  virtual void clean_up_env() override;
+
+  // Check if the Oracle connection is alive
+  virtual bool check_alive() override;
 
  private:
-  ExecutionStatus clean_up_connection(OCIEnv* env);
-  
-  // Create schema (equivalent to creating database in MySQL)
-  bool create_schema(const std::string& schema);
+  // Cleans up the Oracle connection resources
+  ExecutionStatus clean_up_connection(OCIEnv *env, OCIError *err, OCISvcCtx *svc);
 
-  // Create a new OCI environment
-  std::optional<OCIEnv*> create_env();
+  // Creates a connection to the Oracle database
+  bool create_connection(OCIEnv *&env, OCIError *&err, OCISvcCtx *&svc);
 
-  // Create a connection to the Oracle server
-  std::optional<OCISvcCtx*> create_connection(OCIEnv* env);
+  // Create a schema or user (similar to creating a database in MySQL)
+  bool create_schema(const std::string &schema_name);
 
-  unsigned int database_id_ = 0;
-  std::string host_;
-  std::string user_name_;
-  std::string passwd_;
-  std::string db_prefix_;
+  // Oracle connection parameters
+  std::string host_;      // Oracle host
+  std::string port_;      // Oracle port
+  std::string service_;   // Oracle service name
+  std::string user_name_; // Oracle username
+  std::string passwd_;    // Oracle password
+
+  int database_id_ = 0;
+  std::string db_prefix_;  // Prefix for schema names (equivalent to DB in MySQL)
 };
 
 };  // namespace client
 
-#endif
+#endif  // __CLIENT_ORACLE_H__

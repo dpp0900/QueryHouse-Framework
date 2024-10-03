@@ -1,39 +1,18 @@
 #include "client_oracle.h"
 
-#include <oci.h>
 #include <iostream>
+#include <oci.h>
 #include <string>
-#include <optional>
 #include <vector>
 
 using namespace std;
 
-namespace {
-bool is_crash_response(sword status) {
-  return status == OCI_ERROR || status == OCI_INVALID_HANDLE;
-}
-};  // namespace
-
 namespace client {
-
-std::string get_error_message(OCIError* err) {
-    OraText err_msg[512];
-    sb4 err_code;
-
-    // SQLSTATE를 사용하지 않으므로 nullptr로 설정
-    OraText sqlstate[6]; // SQLSTATE는 5 문자로 구성되므로 배열을 선언합니다.
-
-    // Record number를 1로 설정하여 가장 최근 오류를 가져옵니다.
-    OCIErrorGet(err, 1, sqlstate, &err_code, err_msg, sizeof(err_msg), OCI_DEFAULT);
-
-    return std::string((char*)err_msg);
-}
-
-
-
 
 void OracleClient::initialize(YAML::Node config) {
   host_ = config["host"].as<std::string>();
+  port_ = config["port"].as<std::string>();
+  service_ = config["service"].as<std::string>();
   user_name_ = config["user_name"].as<std::string>();
   passwd_ = config["passwd"].as<std::string>();
   db_prefix_ = config["db_prefix"].as<std::string>();
@@ -41,214 +20,179 @@ void OracleClient::initialize(YAML::Node config) {
 
 void OracleClient::prepare_env() {
   ++database_id_;
-  std::string database_name = db_prefix_ + std::to_string(database_id_);
-  if (!create_schema(database_name)) {
+  std::string schema_name = db_prefix_ + std::to_string(database_id_);
+  if (!create_schema(schema_name)) {
     std::cerr << "Failed to create schema." << std::endl;
   }
 }
 
-ExecutionStatus OracleClient::execute(const char* query, size_t size, std::vector<std::vector<std::string>>& result) {
-  // Create a connection for executing the query
-  std::optional<OCIEnv*> env = create_env();
-  if (!env.has_value()) {
-    std::cerr << "Cannot create OCI environment." << std::endl;
+ExecutionStatus OracleClient::execute(const char *query, size_t size, std::vector<std::vector<std::string>> &result) {
+  OCIEnv *env = nullptr;
+  OCIError *err = nullptr;
+  OCISvcCtx *svc = nullptr;
+
+  if (!create_connection(env, err, svc)) {
+    std::cerr << "Cannot create connection at execute" << std::endl;
     return kServerCrash;
   }
 
-  std::optional<OCISvcCtx*> svc_ctx = create_connection(env.value());
-  if (!svc_ctx.has_value()) {
-    std::cerr << "Cannot create OCI connection." << std::endl;
-    OCIHandleFree(env.value(), OCI_HTYPE_ENV);
-    return kServerCrash;
-  }
+  // Prepare and execute query
+  OCIStmt *stmt = nullptr;
+  OCIHandleAlloc(env, (void **)&stmt, OCI_HTYPE_STMT, 0, nullptr);
 
-  OCIStmt* stmt = nullptr;
-  OCIError* err = nullptr;
+  if (OCIStmtPrepare(stmt, err, (text *)query, (ub4)size, OCI_NTV_SYNTAX, OCI_DEFAULT) != OCI_SUCCESS) {
+    std::cerr << "Failed to prepare statement" << std::endl;
+    
+    // Retrieve detailed error message
+    text errbuf[512];
+    sb4 errcode;
+    OCIErrorGet(err, 1, NULL, &errcode, errbuf, sizeof(errbuf), OCI_HTYPE_ERROR);
+    std::cerr << "Error - " << errbuf << std::endl;
 
-  // Allocate memory for the error handle
-  OCIHandleAlloc(env.value(), (void**)&err, OCI_HTYPE_ERROR, 0, nullptr);
-
-  // Prepare the statement
-  if (OCIStmtPrepare2(svc_ctx.value(), &stmt, err, (const OraText*)query, size, nullptr, 0, OCI_NTV_SYNTAX, OCI_DEFAULT) != OCI_SUCCESS) {
-    std::cerr << "OCI statement preparation failed." << std::endl;
-    OCIStmtRelease(stmt, err, nullptr, 0, OCI_DEFAULT);
-    OCIHandleFree(err, OCI_HTYPE_ERROR);  // Free error handle after use
+    clean_up_connection(env, err, svc);
     return kSyntaxError;
   }
 
-  // Execute the statement
-  if (OCIStmtExecute(svc_ctx.value(), stmt, err, 1, 0, nullptr, nullptr, OCI_DEFAULT) != OCI_SUCCESS) {
-    std::cerr << "OCI statement execution failed." << std::endl;
-    OCIStmtRelease(stmt, err, nullptr, 0, OCI_DEFAULT);
-    OCIHandleFree(err, OCI_HTYPE_ERROR);  // Free error handle after use
-    return kServerCrash;
-  }
-
-  // Fetch result set
-  OCIParam* param = nullptr;
-  OCIHandleAlloc(env.value(), (void**)&param, OCI_HTYPE_DESCRIBE, 0, nullptr);
-  ub4 num_cols = 0;
-  OCIAttrGet(stmt, OCI_HTYPE_STMT, &num_cols, nullptr, OCI_ATTR_PARAM_COUNT, err);
-
-  for (ub4 i = 1; i <= num_cols; i++) {
-    OCIParam* col_param = nullptr;
-    OCIParamGet(stmt, OCI_HTYPE_STMT, err, (void**)&col_param, i);
+  if (OCIStmtExecute(svc, stmt, err, 1, 0, nullptr, nullptr, OCI_DEFAULT) != OCI_SUCCESS) {
+    std::cerr << "Failed to execute query" << std::endl;
     
-    OraText* col_name;
-    ub4 col_name_len;
-    OCIAttrGet(col_param, OCI_DTYPE_PARAM, &col_name, &col_name_len, OCI_ATTR_NAME, err);
+    // Retrieve detailed error message
+    text errbuf[512];
+    sb4 errcode;
+    OCIErrorGet(err, 1, NULL, &errcode, errbuf, sizeof(errbuf), OCI_HTYPE_ERROR);
+    std::cerr << "Error - " << errbuf << std::endl;
 
-    std::vector<std::string> row_result;
-    row_result.push_back(std::string((char*)col_name, col_name_len));
-
-    result.push_back(row_result);
+    clean_up_connection(env, err, svc);
+    return kSemanticError;
   }
 
-  // Release the statement and free the handles
-  OCIStmtRelease(stmt, err, nullptr, 0, OCI_DEFAULT);
-  OCIHandleFree(err, OCI_HTYPE_ERROR);  // Free error handle after use
-  OCIHandleFree(env.value(), OCI_HTYPE_ENV);
-  
+  OCIHandleFree(stmt, OCI_HTYPE_STMT);
+  clean_up_connection(env, err, svc);
   return kNormal;
 }
 
 
 void OracleClient::clean_up_env() {
-  std::optional<OCIEnv*> env = create_env();
-  if (!env.has_value()) {
-    std::cerr << "Cannot create OCI environment for cleanup." << std::endl;
-    return;
-  }
+  std::string schema_name = db_prefix_ + std::to_string(database_id_);
+  std::string prefix = "C##";
+  std::string common_user_name = prefix + schema_name;
+  std::string drop_query = "DROP USER " + common_user_name + " CASCADE";
 
-  std::optional<OCISvcCtx*> svc_ctx = create_connection(env.value());
-  if (!svc_ctx.has_value()) {
-    std::cerr << "Cannot create OCI connection for cleanup." << std::endl;
-    OCIHandleFree(env.value(), OCI_HTYPE_ENV);
-    return;
-  }
-
-  OCIStmt* stmt = nullptr;
-  OCIError* err = nullptr;
-
-  // Allocate memory for the error handle
-  OCIHandleAlloc(env.value(), (void**)&err, OCI_HTYPE_ERROR, 0, nullptr);
-
-  std::string database_name = db_prefix_ + std::to_string(database_id_);
-  std::string reset_query = "DROP USER " + database_name + " CASCADE";
-
-  // Prepare the statement
-  if (OCIStmtPrepare2(svc_ctx.value(), &stmt, err, (const OraText*)reset_query.c_str(), reset_query.size(), nullptr, 0, OCI_NTV_SYNTAX, OCI_DEFAULT) != OCI_SUCCESS) {
-    std::cerr << "OCI statement preparation failed during cleanup." << std::endl;
-    OCIStmtRelease(stmt, err, nullptr, 0, OCI_DEFAULT);
-    OCIHandleFree(err, OCI_HTYPE_ERROR);  // Free error handle after use
-    OCIHandleFree(env.value(), OCI_HTYPE_ENV);
-    return;
-  }
-
-  // Execute the statement
-  if (OCIStmtExecute(svc_ctx.value(), stmt, err, 1, 0, nullptr, nullptr, OCI_DEFAULT) != OCI_SUCCESS) {
-    std::cerr << "OCI statement execution failed during cleanup." << std::endl;
-    OCIStmtRelease(stmt, err, nullptr, 0, OCI_DEFAULT);
-    OCIHandleFree(err, OCI_HTYPE_ERROR);  // Free error handle after use
-    OCIHandleFree(env.value(), OCI_HTYPE_ENV);
-    return;
-  }
-
-  // Release the statement and free the handles
-  OCIStmtRelease(stmt, err, nullptr, 0, OCI_DEFAULT);
-  OCIHandleFree(err, OCI_HTYPE_ERROR);  // Free error handle after use
-  OCIHandleFree(env.value(), OCI_HTYPE_ENV);
-}
-
-
-std::optional<OCIEnv*> OracleClient::create_env() {
-  OCIEnv* env = nullptr;
-  if (OCIEnvCreate(&env, OCI_DEFAULT, nullptr, nullptr, nullptr, nullptr, 0, nullptr) != OCI_SUCCESS) {
-    std::cerr << "Failed to create OCI environment." << std::endl;
-    return std::nullopt;
-  }
-  return env;
-}
-
-std::optional<OCISvcCtx*> OracleClient::create_connection(OCIEnv* env) {
-  OCISvcCtx* svc_ctx = nullptr;
-  OCIHandleAlloc(env, (void**)&svc_ctx, OCI_HTYPE_SVCCTX, 0, nullptr);
+  std::cout << "Dropping schema: " << drop_query << std::endl;
   
-  OCIError* err = nullptr;
-  OCIHandleAlloc(env, (void**)&err, OCI_HTYPE_ERROR, 0, nullptr);
+  OCIEnv *env = nullptr;
+  OCIError *err = nullptr;
+  OCISvcCtx *svc = nullptr;
 
-  if (OCILogon(env, err, &svc_ctx, (OraText*)user_name_.c_str(), user_name_.length(),
-               (OraText*)passwd_.c_str(), passwd_.length(),
-               (OraText*)host_.c_str(), host_.length()) != OCI_SUCCESS) {
-    std::cerr << "Failed to connect to Oracle." << std::endl;
-    OCIHandleFree(err, OCI_HTYPE_ERROR);
-    OCIHandleFree(svc_ctx, OCI_HTYPE_SVCCTX);
-    return std::nullopt;
+  if (create_connection(env, err, svc)) {
+    OCIStmt *stmt = nullptr;
+    OCIHandleAlloc(env, (void **)&stmt, OCI_HTYPE_STMT, 0, nullptr);
+    OCIStmtPrepare(stmt, err, (text *)drop_query.c_str(), (ub4)drop_query.size(), OCI_NTV_SYNTAX, OCI_DEFAULT);
+    OCIStmtExecute(svc, stmt, err, 1, 0, nullptr, nullptr, OCI_DEFAULT);
+    OCIHandleFree(stmt, OCI_HTYPE_STMT);
+    clean_up_connection(env, err, svc);
   }
-
-  OCIHandleFree(err, OCI_HTYPE_ERROR);
-  return svc_ctx;
 }
 
 bool OracleClient::check_alive() {
-  std::optional<OCIEnv*> env = create_env();
-  if (!env.has_value()) {
-    return false;
-  }
+  OCIEnv *env = nullptr;
+  OCIError *err = nullptr;
+  OCISvcCtx *svc = nullptr;
 
-  std::optional<OCISvcCtx*> svc_ctx = create_connection(env.value());
-  if (!svc_ctx.has_value()) {
-    return false;
+  bool alive = create_connection(env, err, svc);
+  if (alive) {
+    clean_up_connection(env, err, svc);
   }
-
-  OCIHandleFree(env.value(), OCI_HTYPE_ENV);
-  return true;
+  return alive;
 }
 
 bool OracleClient::create_schema(const std::string &schema_name) {
-    std::optional<OCIEnv*> env = create_env();
-    if (!env.has_value()) {
-        std::cerr << "Cannot create OCI environment." << std::endl;
-        return false;
-    }
+  std::string common_user_name = "C##" + schema_name;  // C## 접두사를 추가
+  std::string create_user_query = "CREATE USER " + common_user_name + " IDENTIFIED BY password";
+  std::string grant_query = "GRANT ALL PRIVILEGES TO " + common_user_name;
 
-    std::optional<OCISvcCtx*> svc_ctx = create_connection(env.value());
-    if (!svc_ctx.has_value()) {
-        std::cerr << "Cannot create OCI connection." << std::endl;
-        OCIHandleFree(env.value(), OCI_HTYPE_ENV);
-        return false;
-    }
 
-    OCIStmt* stmt = nullptr;
-    OCIError* err = nullptr;
+  OCIEnv *env = nullptr;
+  OCIError *err = nullptr;
+  OCISvcCtx *svc = nullptr;
 
-    // Allocate memory for the error handle
-    OCIHandleAlloc(env.value(), (void**)&err, OCI_HTYPE_ERROR, 0, nullptr);
+  if (!create_connection(env, err, svc)) {
+    return false;
+  }
 
-    std::string cmd = "CREATE USER " + schema_name + " IDENTIFIED BY password";
-    if (OCIStmtPrepare2(svc_ctx.value(), &stmt, err, (const OraText*)cmd.c_str(), cmd.size(), nullptr, 0, OCI_NTV_SYNTAX, OCI_DEFAULT) != OCI_SUCCESS) {
-        std::cerr << "OCI statement preparation failed: " << get_error_message(err) << std::endl;
-        OCIHandleFree(err, OCI_HTYPE_ERROR);  // Free error handle
-        OCIHandleFree(env.value(), OCI_HTYPE_ENV);
-        return false;
-    }
+  OCIStmt *stmt = nullptr;
+  OCIHandleAlloc(env, (void **)&stmt, OCI_HTYPE_STMT, 0, nullptr);
 
-    // Execute the statement
-    if (OCIStmtExecute(svc_ctx.value(), stmt, err, 1, 0, nullptr, nullptr, OCI_DEFAULT) != OCI_SUCCESS) {
-        std::cerr << "OCI statement execution failed: " << get_error_message(err) << std::endl;
-        OCIStmtRelease(stmt, err, nullptr, 0, OCI_DEFAULT);
-        OCIHandleFree(err, OCI_HTYPE_ERROR);  // Free error handle
-        OCIHandleFree(env.value(), OCI_HTYPE_ENV);
-        return false;
-    }
+  // Try to execute the "CREATE USER" query
+  if (OCIStmtPrepare(stmt, err, (text *)create_user_query.c_str(), (ub4)create_user_query.size(), OCI_NTV_SYNTAX, OCI_DEFAULT) != OCI_SUCCESS) {
+    std::cerr << "Failed to prepare CREATE USER statement" << std::endl;
+    clean_up_connection(env, err, svc);
+    return false;
+  }
 
-    // Clean up
-    OCIStmtRelease(stmt, err, nullptr, 0, OCI_DEFAULT);
-    OCIHandleFree(err, OCI_HTYPE_ERROR);  // Free error handle
-    OCIHandleFree(env.value(), OCI_HTYPE_ENV);
-    return true;
+  if (OCIStmtExecute(svc, stmt, err, 1, 0, nullptr, nullptr, OCI_DEFAULT) != OCI_SUCCESS) {
+    std::cerr << "Failed to create schema" << std::endl;
+    
+    // Retrieve detailed error message
+    text errbuf[512];
+    sb4 errcode;
+    OCIErrorGet(err, 1, NULL, &errcode, errbuf, sizeof(errbuf), OCI_HTYPE_ERROR);
+    std::cerr << "Error - " << errbuf << std::endl;
+    
+    clean_up_connection(env, err, svc);
+    return false;
+  }
+
+  // Grant privileges
+  if (OCIStmtPrepare(stmt, err, (text *)grant_query.c_str(), (ub4)grant_query.size(), OCI_NTV_SYNTAX, OCI_DEFAULT) != OCI_SUCCESS) {
+    std::cerr << "Failed to prepare GRANT statement" << std::endl;
+    clean_up_connection(env, err, svc);
+    return false;
+  }
+
+  OCIStmtExecute(svc, stmt, err, 1, 0, nullptr, nullptr, OCI_DEFAULT);
+  OCIHandleFree(stmt, OCI_HTYPE_STMT);
+  
+  clean_up_connection(env, err, svc);
+  return true;
 }
 
+bool OracleClient::create_connection(OCIEnv *&env, OCIError *&err, OCISvcCtx *&svc) {
+  // Initialize OCI environment
+  if (OCIEnvCreate(&env, OCI_DEFAULT, nullptr, nullptr, nullptr, nullptr, 0, nullptr) != OCI_SUCCESS) {
+    std::cerr << "Failed to create OCI environment" << std::endl;
+    return false;
+  }
 
+  // Allocate OCI error handle
+  OCIHandleAlloc(env, (void **)&err, OCI_HTYPE_ERROR, 0, nullptr);
+
+  // Create connection string: "//host:port/service"
+  std::string conn_string = "//" + host_ + ":" + port_ + "/" + service_;
+
+  // Log in to the database
+  if (OCILogon(env, err, &svc, (text *)user_name_.c_str(), (ub4)user_name_.size(),
+               (text *)passwd_.c_str(), (ub4)passwd_.size(), (text *)conn_string.c_str(), (ub4)conn_string.size()) != OCI_SUCCESS) {
+    std::cerr << "Failed to connect to Oracle database" << std::endl;
+    OCIHandleFree(err, OCI_HTYPE_ERROR);
+    OCIHandleFree(env, OCI_HTYPE_ENV);
+    return false;
+  }
+
+  return true;
+}
+
+ExecutionStatus OracleClient::clean_up_connection(OCIEnv *env, OCIError *err, OCISvcCtx *svc) {
+  if (svc) {
+    OCILogoff(svc, err);
+  }
+  if (err) {
+    OCIHandleFree(err, OCI_HTYPE_ERROR);
+  }
+  if (env) {
+    OCIHandleFree(env, OCI_HTYPE_ENV);
+  }
+  return kNormal;
+}
 
 };  // namespace client

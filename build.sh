@@ -64,11 +64,6 @@ make -j4
 sudo make install
 SQLITE_END_TIME=$(date +%s)
 
-# Oracle 클라이언트 환경 변수 설정
-export CMAKE_PREFIX_PATH="${BASE_DIR}/opt/oracle/instantclient-basic-linux.x64-23.5.0.24.07/instantclient_23_5"
-export LD_LIBRARY_PATH="${BASE_DIR}/opt/oracle/instantclient-basic-linux.x64-23.5.0.24.07/instantclient_23_5:$LD_LIBRARY_PATH"
-ORACLE_END_TIME=$(date +%s)
-
 # CMake 빌드
 cd $BASE_DIR
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -Wno-dev -DORACLE=ON
