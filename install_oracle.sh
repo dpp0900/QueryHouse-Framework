@@ -10,25 +10,24 @@ DOWNLOAD_URL="https://download.oracle.com/otn-pub/otn_software/db-free/${RPM_NAM
 sudo useradd --no-create-home oracle
 sudo groupadd oinstall
 
+# Setting shared memory
 
-echo "[INFO] Downloading Oracle Database RPM"
-if [ ! -f "${RPM_NAME}" ]; then
-  wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" "${DOWNLOAD_URL}"
-fi
+sudo touch /etc/rc2.d/S01shm_load
+sudo chmod 755 /etc/rc2.d/S01shm_load
+sudo echo "echo \#!/bin/sh" | sudo tee -a /etc/rc2.d/S01shm_load
+sudo echo "case \"\$1\" in" | sudo tee -a /etc/rc2.d/S01shm_load
+sudo echo "start) mkdir /var/lock/subsys 2>/dev/null" | sudo tee -a /etc/rc2.d/S01shm_load
+sudo echo "touch /var/lock/subsys/listener" | sudo tee -a /etc/rc2.d/S01shm_load
+sudo echo "rm /dev/shm 2>/dev/null" | sudo tee -a /etc/rc2.d/S01shm_load
+sudo echo "mkdir /dev/shm 2>/dev/null" | sudo tee -a /etc/rc2.d/S01shm_load
+sudo echo "mount -t tmpfs shmfs -o size=4096m /dev/shm" | sudo tee -a /etc/rc2.d/S01shm_load
+sudo echo ";;" | sudo tee -a /etc/rc2.d/S01shm_load
+sudo echo "*) echo error" | sudo tee -a /etc/rc2.d/S01shm_load
+sudo echo "exit 1" | sudo tee -a /etc/rc2.d/S01shm_load
+sudo echo ";;" | sudo tee -a /etc/rc2.d/S01shm_load
+sudo echo "esac" | sudo tee -a /etc/rc2.d/S01shm_load
 
-echo "[INFO] Converting Oracle Database RPM to DEB"
-if [ ! -f "${DEB_NAME}" ]; then
-  sudo alien --scripts -d "${RPM_NAME}"
-fi
 
-# Install Oracle Database
-echo "[INFO] Installing Oracle Database"
-sudo mkdir -p /opt/oracle
-sudo chown oracle:oinstall /opt/oracle
-sudo dpkg -i "${DEB_NAME}"
-
-# Configure Kernel Parameters
-echo "[INFO] Configuring Kernel Parameters"
 
 # Kernel Parameter Settings for Oracle ./Database Free
 SYSCTL_CONF="/etc/sysctl.d/97-oracle-database-sysctl.conf"
@@ -51,6 +50,25 @@ fi
 
 # Apply the changes
 sudo sysctl -p
+
+echo "[INFO] Downloading Oracle Database RPM"
+if [ ! -f "${RPM_NAME}" ]; then
+  wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" "${DOWNLOAD_URL}"
+fi
+
+echo "[INFO] Converting Oracle Database RPM to DEB"
+if [ ! -f "${DEB_NAME}" ]; then
+  sudo alien --scripts -d "${RPM_NAME}"
+fi
+
+# Install Oracle Database
+echo "[INFO] Installing Oracle Database"
+sudo mkdir -p /opt/oracle
+sudo chown oracle:oinstall /opt/oracle
+sudo dpkg -i "${DEB_NAME}"
+
+# Configure Kernel Parameters
+echo "[INFO] Configuring Kernel Parameters"
 
 # Configure Oracle Database
 echo "[INFO] Configuring Oracle Database"
