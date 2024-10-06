@@ -48,6 +48,7 @@ class OracleClient : public DBClient {
 
   int database_id_ = 0;
   std::string db_prefix_;  // Prefix for schema names (equivalent to DB in MySQL)
+  std::string default_schema_;  // Default schema name for the current connection
 };
 
 };  // namespace client
