@@ -87,7 +87,8 @@
         "charconv": "cpp",
         "complex": "cpp",
         "source_location": "cpp",
-        "rope": "cpp"
+        "rope": "cpp",
+        "stack": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }
