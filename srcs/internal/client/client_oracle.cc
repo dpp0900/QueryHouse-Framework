@@ -44,7 +44,6 @@ ExecutionStatus OracleClient::execute(const char *query, size_t size, std::vecto
     OCISvcCtx *svc = nullptr;
     OCIDefine *defn = nullptr;
 
-    char result_string[1024];
 
     if (!create_connection(env, err, svc)) {
         std::cerr << "Cannot create connection at execute" << std::endl;
@@ -71,9 +70,8 @@ ExecutionStatus OracleClient::execute(const char *query, size_t size, std::vecto
 
         // Check if it's a SELECT statement
         if (q.find("SELECT") != std::string::npos) {
-            // Define the output variable (before execution)
-            if (OCIDefineByPos(stmt, &defn, err, 1, (dvoid*)result_string, 1024, SQLT_STR, NULL, NULL, NULL, OCI_DEFAULT) != OCI_SUCCESS) {
-                std::cerr << "Failed to define result" << std::endl;
+            if (OCIStmtExecute(svc, stmt, err, 0, 0, nullptr, nullptr, OCI_DESCRIBE_ONLY) != OCI_SUCCESS) {
+                std::cerr << "Failed to execute DESCRIBE query" << std::endl;
 
                 // Retrieve detailed error message
                 text errbuf[512];
@@ -83,6 +81,38 @@ ExecutionStatus OracleClient::execute(const char *query, size_t size, std::vecto
 
                 clean_up_connection(env, err, svc);
                 return kSemanticError;
+            }
+            ub4 columnCount;
+            if (OCIAttrGet(stmt, OCI_HTYPE_STMT, &columnCount, 0, OCI_ATTR_PARAM_COUNT, err) != OCI_SUCCESS) {
+                std::cerr << "Failed to get column count" << std::endl;
+
+                // Retrieve detailed error message
+                text errbuf[512];
+                sb4 errcode;
+                OCIErrorGet(err, 1, NULL, &errcode, errbuf, sizeof(errbuf), OCI_HTYPE_ERROR);
+                std::cerr << "Error - " << errbuf << std::endl;
+
+                clean_up_connection(env, err, svc);
+                return kSemanticError;
+            }
+            std::cout << "Column count: " << columnCount << std::endl;
+            
+            char result_string[1024][1024];            
+
+            for (ub4 i = 1; i <= columnCount; i++) {
+              
+                if(OCIDefineByPos(stmt, &defn, err, i, result_string[i], 1024, SQLT_STR, nullptr, nullptr, nullptr, OCI_DEFAULT) != OCI_SUCCESS) {
+                    std::cerr << "Failed to define column " << i << std::endl;
+
+                    // Retrieve detailed error message
+                    text errbuf[512];
+                    sb4 errcode;
+                    OCIErrorGet(err, 1, NULL, &errcode, errbuf, sizeof(errbuf), OCI_HTYPE_ERROR);
+                    std::cerr << "Error - " << errbuf << std::endl;
+
+                    clean_up_connection(env, err, svc);
+                    return kSemanticError;
+                }
             }
 
             // Execute the query
@@ -98,11 +128,12 @@ ExecutionStatus OracleClient::execute(const char *query, size_t size, std::vecto
                 clean_up_connection(env, err, svc);
                 return kSemanticError;
             }
-
-            // Fetch the result
-            while (OCIStmtFetch(stmt, err, 1, OCI_FETCH_NEXT, OCI_DEFAULT) == OCI_SUCCESS) {
-                std::cout << "Result: " << result_string << std::endl;
-                result.push_back({result_string});
+            while (OCIStmtFetch2(stmt, err, 1, OCI_FETCH_NEXT, 0, OCI_DEFAULT) == OCI_SUCCESS) {
+                std::vector<std::string> row;
+                for (ub4 i = 1; i <= columnCount; i++) {
+                    row.push_back(result_string[i]);
+                }
+                result.push_back(row);
             }
         } else {
             // For non-SELECT statements, simply execute
