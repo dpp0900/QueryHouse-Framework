@@ -8,7 +8,6 @@
 #include "afl-fuzz.h"
 #include "config_validate.h"
 #include "db.h"
-#include "env.h"
 #include "yaml-cpp/yaml.h"
 
 struct SquirrelMutator {
@@ -18,15 +17,13 @@ struct SquirrelMutator {
   std::string current_input;
 };
 
-std::string basedir = getenv("HOME");
-basedir += "/QueryHouse";
-std::string kConfig = basedir + "/data/config/";
-
 extern "C" {
 
 
 void *afl_custom_init(afl_state_t *afl, unsigned int seed) {
-  const char *config_file_path = kConfig;
+  std::string basedir = getenv("HOME");
+  basedir += "/QueryHouse";
+  std::string config_file_path = basedir + "/data/config/config_mysql.yml";
   std::string config_file(config_file_path);
   std::cerr << "Config file: " << config_file << std::endl;
   YAML::Node config = YAML::LoadFile(config_file);
