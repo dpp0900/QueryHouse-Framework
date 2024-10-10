@@ -8,3 +8,5 @@ Testing
 opt
 *.deb
 *.rpm
+afl_bld
+mysql_afl_bld

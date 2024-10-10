@@ -200,7 +200,6 @@ bool comapre_result(const vector<vector<string>> &result1, const vector<vector<s
 }
 
 int main(int argc, char *argv[]) {
-
   //set basedir as /home/$user/QueryHouse-Framwork
   string basedir = getenv("HOME");
   basedir += "/QueryHouse";
@@ -240,6 +239,7 @@ int main(int argc, char *argv[]) {
   // is stopped and restarted, we should not start another server.
   __afl_map_shm();
 
+
   for (auto &db_client : db_clients) {
     if (!db_client->check_alive()) {
       cout << "DB Client is not alive." << endl;
@@ -249,11 +249,16 @@ int main(int argc, char *argv[]) {
       sleep(5);
     }
   }
-  while (len > 0){
+  __afl_start_forkserver();
+  while ((len = __afl_next_testcase(buf, kMaxInputSize)) > 0) {
+    FILE *fp = fopen("/tmp/db_driver_log", "a");
+    fwrite(buf, 1, len, fp);
+    fwrite("\n", 1, 1, fp);
+    fclose(fp);
     vector<vector<vector<string>>> compare_queue;
     for (auto &db_client : db_clients) {
       cout << "DB Client: " << db_names[&db_client - &db_clients[0]] << endl;
-      len = __afl_next_testcase(buf, kMaxInputSize);
+      string query((const char *)buf, len);
       vector<vector<string>> result;
       db_client->prepare_env();
       client::ExecutionStatus status = db_client->execute((const char *)buf, len, result);
@@ -281,6 +286,14 @@ int main(int argc, char *argv[]) {
         }
       }
     }
+
+
+
+    // remove this, this is just to make afl-fuzz not complain when run
+    __afl_area_ptr[1] = 1;
+
+    /* report the test case is done and wait for the next */
+    __afl_end_testcase(client::kNormal);
   }
 
 
