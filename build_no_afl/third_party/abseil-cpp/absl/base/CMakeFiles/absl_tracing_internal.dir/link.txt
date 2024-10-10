@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -w  -O3 -shared -Wl,-soname,libabsl_tracing_internal.so -o libabsl_tracing_internal.so CMakeFiles/absl_tracing_internal.dir/internal/tracing.cc.o  -Wl,-rpath,"\$ORIGIN" libabsl_base.so libabsl_raw_logging_internal.so libabsl_log_severity.so libabsl_spinlock_wait.so 

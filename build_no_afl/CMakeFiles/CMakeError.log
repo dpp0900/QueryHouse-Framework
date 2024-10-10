@@ -1,0 +1,25 @@
+Performing C++ SOURCE FILE Test ABSL_INTERNAL_AT_LEAST_CXX20 failed with the following output:
+Change Dir: /home/dpp/QueryHouse/build_no_afl/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_26144/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_26144.dir/build.make CMakeFiles/cmTC_26144.dir/build
+gmake[1]: Entering directory '/home/dpp/QueryHouse/build_no_afl/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_26144.dir/src.cxx.o
+/usr/bin/c++ -DABSL_INTERNAL_AT_LEAST_CXX20  -w  -o CMakeFiles/cmTC_26144.dir/src.cxx.o -c /home/dpp/QueryHouse/build_no_afl/CMakeFiles/CMakeTmp/src.cxx
+/home/dpp/QueryHouse/build_no_afl/CMakeFiles/CMakeTmp/src.cxx:6:4: error: #error "The compiler defaults or is configured for C++ < 20"
+    6 | #  error "The compiler defaults or is configured for C++ < 20"
+      |    ^~~~~
+gmake[1]: *** [CMakeFiles/cmTC_26144.dir/build.make:78: CMakeFiles/cmTC_26144.dir/src.cxx.o] Error 1
+gmake[1]: Leaving directory '/home/dpp/QueryHouse/build_no_afl/CMakeFiles/CMakeTmp'
+gmake: *** [Makefile:127: cmTC_26144/fast] Error 2
+
+
+Source file was:
+#ifdef _MSC_VER
+#  if _MSVC_LANG < 202002L
+#    error "The compiler defaults or is configured for C++ < 20"
+#  endif
+#elif __cplusplus < 202002L
+#  error "The compiler defaults or is configured for C++ < 20"
+#endif
+int main() { return 0; }
+

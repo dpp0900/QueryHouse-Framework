@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -w  -O3 -shared -Wl,-soname,libabsl_stacktrace.so -o libabsl_stacktrace.so CMakeFiles/absl_stacktrace.dir/stacktrace.cc.o  -Wl,-rpath,"\$ORIGIN:\$ORIGIN/../base" libabsl_debugging_internal.so ../base/libabsl_raw_logging_internal.so ../base/libabsl_log_severity.so 

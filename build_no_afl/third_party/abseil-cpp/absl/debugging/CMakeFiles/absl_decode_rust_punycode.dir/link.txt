@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -w  -O3 -shared -Wl,-soname,libabsl_decode_rust_punycode.so -o libabsl_decode_rust_punycode.so CMakeFiles/absl_decode_rust_punycode.dir/internal/decode_rust_punycode.cc.o  -Wl,-rpath,"\$ORIGIN" libabsl_utf8_for_code_point.so 

@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -w  -O3 -shared -Wl,-soname,libabsl_demangle_internal.so -o libabsl_demangle_internal.so CMakeFiles/absl_demangle_internal.dir/internal/demangle.cc.o  -Wl,-rpath,"\$ORIGIN" libabsl_demangle_rust.so libabsl_decode_rust_punycode.so libabsl_utf8_for_code_point.so 

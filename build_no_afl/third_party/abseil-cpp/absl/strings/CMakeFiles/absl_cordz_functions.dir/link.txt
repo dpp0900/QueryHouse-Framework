@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -w  -O3 -shared -Wl,-soname,libabsl_cordz_functions.so -o libabsl_cordz_functions.so CMakeFiles/absl_cordz_functions.dir/internal/cordz_functions.cc.o  -Wl,-rpath,"\$ORIGIN/../profiling:\$ORIGIN/../base" ../profiling/libabsl_exponential_biased.so ../base/libabsl_raw_logging_internal.so ../base/libabsl_log_severity.so 
