@@ -10,3 +10,4 @@ opt
 *.rpm
 afl_bld
 mysql_afl_bld
+build_no_afl
