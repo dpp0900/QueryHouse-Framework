@@ -1,5 +1,0 @@
-if(EXISTS "/home/dpp/QueryHouse/build_no_afl/tests/db_config_test[1]_tests.cmake")
-  include("/home/dpp/QueryHouse/build_no_afl/tests/db_config_test[1]_tests.cmake")
-else()
-  add_test(db_config_test_NOT_BUILT db_config_test_NOT_BUILT)
-endif()

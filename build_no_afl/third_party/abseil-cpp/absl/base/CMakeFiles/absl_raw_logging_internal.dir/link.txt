@@ -1,1 +1,0 @@
-/usr/bin/c++ -fPIC  -w  -O3 -shared -Wl,-soname,libabsl_raw_logging_internal.so -o libabsl_raw_logging_internal.so CMakeFiles/absl_raw_logging_internal.dir/internal/raw_logging.cc.o  -Wl,-rpath,"\$ORIGIN" libabsl_log_severity.so 

@@ -1,1 +1,0 @@
-/usr/bin/c++ -fPIC  -w  -O3 -shared -Wl,-soname,libabsl_scoped_set_env.so -o libabsl_scoped_set_env.so CMakeFiles/absl_scoped_set_env.dir/internal/scoped_set_env.cc.o  -Wl,-rpath,"\$ORIGIN" libabsl_raw_logging_internal.so libabsl_log_severity.so 
