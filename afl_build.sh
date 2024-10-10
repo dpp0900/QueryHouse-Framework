@@ -28,24 +28,24 @@ AFL_END_TIME=$(date +%s)
 
 
 # MySQL 빌드 및 설치
-if [ ! -d "$BASE_DIR/mysql_afl_bld" ]; then
-    mkdir -p $BASE_DIR/mysql_afl_bld
-fi
+# if [ ! -d "$BASE_DIR/mysql_afl_bld" ]; then
+#     mkdir -p $BASE_DIR/mysql_afl_bld
+# fi
 
-cd $BASE_DIR/mysql_afl_bld
-CC=$BASE_DIR/afl_bld/afl-clang-fast CXX=$BASE_DIR/afl_bld/afl-clang-fast++ cmake $BASE_DIR/mysql/ -DDOWNLOAD_BOOST=1 -DWITH_BOOST=../boost -DWITH_DEBUG=1 -DCPACK_MONOLITHIC_INSTALL=1 -DWITH_UNIT_TESTS=OFF
-make -j20
-sudo cmake --install . --prefix /usr/local/mysql/
-sudo chown $USER:$USER /usr/local/mysql/ -R
+# cd $BASE_DIR/mysql_afl_bld
+# CC=$BASE_DIR/afl_bld/afl-clang-fast CXX=$BASE_DIR/afl_bld/afl-clang-fast++ cmake $BASE_DIR/mysql/ -DDOWNLOAD_BOOST=1 -DWITH_BOOST=../boost -DWITH_DEBUG=1 -DCPACK_MONOLITHIC_INSTALL=1 -DWITH_UNIT_TESTS=OFF
+# make -j20
+# sudo cmake --install . --prefix /usr/local/mysql/
+# sudo chown $USER:$USER /usr/local/mysql/ -R
 
-cd /usr/local/mysql/
-if [ ! -d "mysql-files" ]; then
-    mkdir mysql-files
-    chmod 750 mysql-files
-fi
+# cd /usr/local/mysql/
+# if [ ! -d "mysql-files" ]; then
+#     mkdir mysql-files
+#     chmod 750 mysql-files
+# fi
 
-AFL_IGNORE_PROBLEMS=1 bin/mysqld --initialize-insecure --user=$USER
-MYSQL_END_TIME=$(date +%s)
+# AFL_IGNORE_PROBLEMS=1 bin/mysqld --initialize-insecure --user=$USER
+# MYSQL_END_TIME=$(date +%s)
 
 # # PostgreSQL 빌드 및 설치
 # kill $(ps aux | grep 'postgres -D /usr/local/pgsql/data' | awk '{print $2}')
@@ -65,21 +65,22 @@ MYSQL_END_TIME=$(date +%s)
 # /usr/local/pgsql/bin/initdb -D /usr/local/pgsql/data
 # POSTGRES_END_TIME=$(date +%s)
 
-# # SQLite 빌드 및 설치
-# if [ ! -d "$BASE_DIR/sqlite_afl_bld" ]; then
-#     mkdir -p $BASE_DIR/sqlite_afl_bld
-# fi
+# SQLite 빌드 및 설치
+if [ ! -d "$BASE_DIR/sqlite_afl_bld" ]; then
+    mkdir -p $BASE_DIR/sqlite_afl_bld
+fi
 
-# cd $BASE_DIR/sqlite_afl_bld
-# $BASE_DIR/sqlite/configure --enable-all
-# make -j4
+cd $BASE_DIR/sqlite_afl_bld
+
+CC=$BASE_DIR/afl_bld/afl-clang-fast CXX=$BASE_DIR/afl_bld/afl-clang-fast++ CFLAGS="-DSQLITE_THREADSAFE=0 -DSQLITE_ENABLE_LOAD_EXTENSION=0 -DSQLITE_NO_SYNC -DSQLITE_DEBUG -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_RTREE -DSQLITE_OMIT_RANDOMNESS -fsanitize=address" $BASE_DIR/sqlite/configure --enable-all --disable-shared --disable-static
+CC=$BASE_DIR/afl_bld/afl-clang-fast CXX=$BASE_DIR/afl_bld/afl-clang-fast++ make -j20
 # sudo make install
-# SQLITE_END_TIME=$(date +%s)
+SQLITE_END_TIME=$(date +%s)
 
 # driver 빌드
 cd $BASE_DIR
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -Wno-dev -DORACLE=ON
-cmake --build build -j20
+cmake --build build
 
 DRIVER_END_TIME=$(date +%s)
 

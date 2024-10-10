@@ -23,7 +23,7 @@ extern "C" {
 void *afl_custom_init(afl_state_t *afl, unsigned int seed) {
   std::string basedir = getenv("HOME");
   basedir += "/QueryHouse";
-  std::string config_file_path = basedir + "/data/config/config_mysql.yml";
+  std::string config_file_path = basedir + "/data/config/config_sqlite.yml";
   std::string config_file(config_file_path);
   std::cerr << "Config file: " << config_file << std::endl;
   YAML::Node config = YAML::LoadFile(config_file);
